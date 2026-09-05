@@ -18,6 +18,7 @@ License: MIT
 import argparse
 import csv
 import json
+import os
 import sys
 from typing import Dict, Any, Optional
 
@@ -337,6 +338,22 @@ def main(argv=None):
     p_batch.add_argument("-i", "--input", required=True)
     p_batch.add_argument("-o", "--output", default="results.csv")
 
+    # Audit (enterprise supervisor dispatch)
+    p_audit = subparsers.add_parser("audit", help="Dispatch task through enterprise supervisor")
+    p_audit.add_argument("--task-id", required=True, help="Task identifier")
+    p_audit.add_argument("--target", default="SPECIMEN-001", help="Target identifier")
+    p_audit.add_argument("--primary", type=float, default=10.0, help="Primary metric")
+    p_audit.add_argument("--secondary", type=float, default=3.0, help="Secondary metric")
+    p_audit.add_argument("--status", default="NOMINAL", help="Status descriptor")
+    p_audit.add_argument("--critical", action="store_true", help="Critical flag")
+
+    # Chat (supervisory conversational assistant)
+    p_chat = subparsers.add_parser("chat", help="Supervisory conversational assistant")
+    p_chat.add_argument("query", nargs="+", help="Query text")
+
+    # Verify audit trail integrity
+    p_verify = subparsers.add_parser("verify-audit", help="Verify HMAC audit trail integrity")
+
     args = parser.parse_args(argv)
 
     if args.command == "calc":
@@ -366,6 +383,36 @@ def main(argv=None):
     elif args.command == "batch":
         count = process_batch(args.input, args.output)
         print(f"Processed {count} records -> {args.output}")
+
+    elif args.command == "audit":
+        from agents.models import SystemTaskPayload
+        from agents.supervisor import SystemSupervisor
+        payload = SystemTaskPayload(
+            task_id=args.task_id,
+            target_identifier=args.target,
+            primary_metric=args.primary,
+            secondary_metric=args.secondary,
+            status_descriptor=args.status,
+            is_critical_flag=args.critical,
+        )
+        supervisor = SystemSupervisor(model_provider="mock")
+        dossier = supervisor.process_task(payload)
+        print(json.dumps(dossier.to_dict(), indent=2, default=str))
+
+    elif args.command == "chat":
+        from agents.supervisor import SystemSupervisor
+        supervisor = SystemSupervisor(model_provider="mock")
+        query = " ".join(args.query)
+        response = supervisor.query_supervisory_chat(query)
+        print(json.dumps({"query": query, "response": response}, indent=2))
+
+    elif args.command == "verify-audit":
+        from agents.base import AuditLogger
+        verified = AuditLogger.verify_integrity()
+        trail_len = len(AuditLogger.get_trail())
+        print(json.dumps({"audit_integrity_verified": verified, "trail_length": trail_len}, indent=2))
+
+    return 0
 
 
 if __name__ == "__main__":
