@@ -16,7 +16,7 @@ supervisor = SystemSupervisor(model_provider="mock")
 
 app = FastAPI(
     title="Tmb Tumor Mutation Burden Calc API",
-    description="Enterprise Distributed Component Platform (Clinical & Biomedical AI)",
+    description="Research utility with demonstration-only supervisor endpoints",
     version="3.0.0-ENTERPRISE",
 )
 
@@ -37,7 +37,7 @@ def application_script():
 
 @app.get("/health")
 def health():
-    return {"status": "HEALTHY", "service": "tmb-tumor-mutation-burden-calc", "domain": "Clinical & Biomedical AI", "standard": "CAP / CLSI / ISO Standards", "version": "3.0.0-ENTERPRISE"}
+    return {"status": "HEALTHY", "service": "tmb-tumor-mutation-burden-calc", "domain": "Clinical & Biomedical AI", "standard": "demonstration rules only", "version": "3.0.0-ENTERPRISE"}
 
 
 @app.get("/metrics")

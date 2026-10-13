@@ -44,10 +44,8 @@ PANEL_SIZES_MB = {
     "guardant": 0.73,
     "f1cdx": 1.14,
     "wes": 38.0,
-    "wgs": 38.0,
     "tso500": 1.70,
     "tso-500": 1.70,
-    "nextseq": 1.70,
 }
 
 # FDA-approved TMB threshold
@@ -106,7 +104,7 @@ def calculate_tmb(total_mutations: int, coding_region_size_mb: float,
         description = f"TMB {tmb} mut/Mb: Intermediate tumor mutational burden."
     elif raw_tmb < 16.0:
         category = "High"
-        description = f"TMB {tmb} mut/Mb: High tumor mutational burden (FDA threshold met)."
+        description = f"TMB {tmb} mut/Mb: High numerical TMB (FDA cutoff met; eligibility not determined)."
     else:
         category = "Very High"
         description = f"TMB {tmb} mut/Mb: Very high tumor mutational burden."
@@ -213,28 +211,28 @@ def immunotherapy_response_assessment(tmb: float, cancer_type: Optional[str] = N
     result = {"tmb": tmb}
 
     if tmb >= FDA_TMB_THRESHOLD:
-        result["response_likelihood"] = "Higher likelihood of response to checkpoint inhibitors"
+        result["response_likelihood"] = "TMB at or above numeric high cutoff; response probability not determined"
         result["therapy_recommendation"] = (
             "FDA 2020 accelerated approval of Pembrolizumab concerns previously treated unresectable "
             "or metastatic solid tumors with TMB >=10 mut/Mb by an FDA-approved "
             "test and no satisfactory alternative treatments. "
             "This numerical assessment does not establish clinical eligibility."
         )
-        result["evidence_level"] = "FDA-approved (KEYNOTE-158)"
+        result["evidence_level"] = "FDA indication applies only with its additional clinical and assay criteria"
     elif tmb >= 5.0:
-        result["response_likelihood"] = "Moderate likelihood of response"
+        result["response_likelihood"] = "Intermediate TMB; response probability not determined"
         result["therapy_recommendation"] = (
             "TMB is intermediate. Response to checkpoint inhibitors varies by "
             "cancer type. Consider as part of a comprehensive biomarker panel."
         )
-        result["evidence_level"] = "Emerging evidence"
+        result["evidence_level"] = "Descriptive TMB category; no response prediction"
     else:
-        result["response_likelihood"] = "Lower likelihood of response to checkpoint inhibitors alone"
+        result["response_likelihood"] = "Low TMB; response probability not determined"
         result["therapy_recommendation"] = (
             "TMB is below this numeric cutoff. It does not exclude benefit "
             "from immunotherapy under other indications or biomarkers."
         )
-        result["evidence_level"] = "Standard of care"
+        result["evidence_level"] = "Descriptive TMB category; no response prediction"
 
     result["note"] = "Exploratory context only; not a validated response predictor or a treatment recommendation."
     if cancer_type:

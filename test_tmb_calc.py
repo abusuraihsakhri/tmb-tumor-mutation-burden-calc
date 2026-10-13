@@ -99,16 +99,16 @@ class TestImmunotherapyResponse:
 
     def test_response_tmb_high(self):
         result = immunotherapy_response_assessment(15.0)
-        assert "Higher likelihood" in result["response_likelihood"]
+        assert "response probability not determined" in result["response_likelihood"]
         assert "Pembrolizumab" in result["therapy_recommendation"]
 
     def test_response_tmb_intermediate(self):
         result = immunotherapy_response_assessment(7.0)
-        assert "Moderate" in result["response_likelihood"]
+        assert "Intermediate TMB" in result["response_likelihood"]
 
     def test_response_tmb_low(self):
         result = immunotherapy_response_assessment(2.0)
-        assert "Lower likelihood" in result["response_likelihood"]
+        assert "Low TMB" in result["response_likelihood"]
 
     def test_response_with_cancer_type(self):
         result = immunotherapy_response_assessment(12.0, "NSCLC")
