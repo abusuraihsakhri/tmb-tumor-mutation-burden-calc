@@ -18,6 +18,7 @@ License: MIT
 import argparse
 import csv
 import json
+import math
 import os
 import sys
 from typing import Dict, Any, Optional
@@ -43,10 +44,8 @@ PANEL_SIZES_MB = {
     "guardant": 0.73,
     "f1cdx": 1.14,
     "wes": 38.0,
-    "wgs": 38.0,
     "tso500": 1.70,
     "tso-500": 1.70,
-    "nextseq": 1.70,
 }
 
 # FDA-approved TMB threshold
@@ -81,38 +80,45 @@ def calculate_tmb(total_mutations: int, coding_region_size_mb: float,
     dict with tmb, tmb_category, fda_eligible, coding_region_size_mb,
     total_mutations, non_synonymous_mutations, description
     """
-    if total_mutations < 0:
-        raise ValueError(f"total_mutations must be >= 0; got {total_mutations}")
-    if coding_region_size_mb <= 0:
-        raise ValueError(f"coding_region_size_mb must be > 0; got {coding_region_size_mb}")
-    if synonymous_count < 0:
-        raise ValueError(f"synonymous_count must be >= 0; got {synonymous_count}")
+    if type(total_mutations) is not int or total_mutations < 0:
+        raise ValueError("total_mutations must be >= 0 and an integer")
+    if isinstance(coding_region_size_mb, bool) or not isinstance(coding_region_size_mb, (int, float)) or not math.isfinite(coding_region_size_mb) or coding_region_size_mb <= 0:
+        raise ValueError("coding_region_size_mb must be > 0 and finite")
+    if type(synonymous_count) is not int or synonymous_count < 0:
+        raise ValueError("synonymous_count must be >= 0 and an integer")
     if synonymous_count > total_mutations:
         raise ValueError("synonymous_count cannot exceed total_mutations")
 
     non_syn = total_mutations - synonymous_count if include_synonymous else total_mutations
-    tmb = round(total_mutations / coding_region_size_mb, 2)
+    raw_tmb = total_mutations / coding_region_size_mb
+    if not math.isfinite(raw_tmb):
+        raise ValueError("Calculated TMB is not finite")
+    tmb = round(raw_tmb, 2)
 
-    # Category thresholds
-    if tmb < 5.0:
+    # Never make cutoff decisions with display-rounded measurements.
+    if raw_tmb < 5.0:
         category = "Low"
         description = f"TMB {tmb} mut/Mb: Low tumor mutational burden."
-    elif tmb < 10.0:
+    elif raw_tmb < 10.0:
         category = "Intermediate"
         description = f"TMB {tmb} mut/Mb: Intermediate tumor mutational burden."
-    elif tmb < 16.0:
+    elif raw_tmb < 16.0:
         category = "High"
-        description = f"TMB {tmb} mut/Mb: High tumor mutational burden (FDA threshold met)."
+        description = f"TMB {tmb} mut/Mb: High numerical TMB (FDA cutoff met; eligibility not determined)."
     else:
         category = "Very High"
         description = f"TMB {tmb} mut/Mb: Very high tumor mutational burden."
 
-    fda_eligible = tmb >= FDA_TMB_THRESHOLD
+    fda_eligible = raw_tmb >= FDA_TMB_THRESHOLD  # Compatibility: numerical cutoff only
 
     return {
         "tmb": tmb,
+        "tmb_unrounded": raw_tmb,
         "tmb_category": category,
         "fda_eligible": fda_eligible,
+        "meets_numeric_fda_tmb_cutoff": fda_eligible,
+        "clinical_eligibility_determined": False,
+        "clinical_note": "Numerical cutoff does not establish clinical treatment eligibility; assay, stage, previous treatment and alternatives matter.",
         "fda_threshold": FDA_TMB_THRESHOLD,
         "coding_region_size_mb": coding_region_size_mb,
         "total_mutations": total_mutations,
@@ -128,16 +134,17 @@ def calculate_tmb(total_mutations: int, coding_region_size_mb: float,
 # ---------------------------------------------------------------------------
 
 def adjust_for_panel_size(tmb_raw: float, panel_size_mb: float,
-                          reference_size_mb: float = WES_CODING_REGION_MB) -> Dict[str, Any]:
+                          reference_size_mb: float = WES_CODING_REGION_MB,
+                          experimental_correction: bool = False) -> Dict[str, Any]:
     """
     Adjust TMB for small panel sizes using a correction factor.
 
     Small gene panels may over- or under-estimate TMB compared to WES.
-    A correction factor can be applied based on the ratio of panel size
-    to reference (WES) size.
+    By default this function leaves raw TMB unchanged. The old size-only
+    heuristic is available only with experimental_correction=True.
 
-    Note: This is a simplified linear correction. In practice, panel-specific
-    correction factors from validation studies should be used.
+    Size alone cannot calibrate panels; use validated assay-specific
+    measurements for clinical analyses.
 
     Parameters
     ----------
@@ -152,17 +159,16 @@ def adjust_for_panel_size(tmb_raw: float, panel_size_mb: float,
     -------
     dict with raw_tmb, adjusted_tmb, correction_factor, panel_size, reference_size
     """
-    if tmb_raw < 0:
-        raise ValueError(f"tmb_raw must be >= 0; got {tmb_raw}")
-    if panel_size_mb <= 0:
-        raise ValueError(f"panel_size_mb must be > 0; got {panel_size_mb}")
-    if reference_size_mb <= 0:
-        raise ValueError(f"reference_size_mb must be > 0; got {reference_size_mb}")
+    for name, value in (("tmb_raw", tmb_raw), ("panel_size_mb", panel_size_mb), ("reference_size_mb", reference_size_mb)):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            raise ValueError(f"{name} must be finite")
+        if value < 0 or (name != "tmb_raw" and value == 0):
+            raise ValueError(f"{name} must be {'>= 0' if name == 'tmb_raw' else '> 0'}")
 
     # For small panels, apply a variance-based correction
     # Larger panels are more stable; smaller panels have higher variance
     # Simplified: correction = sqrt(reference / panel) for small panels
-    if panel_size_mb < 5.0:
+    if experimental_correction and panel_size_mb < 5.0:
         correction_factor = round((reference_size_mb / panel_size_mb) ** 0.15, 3)
     else:
         correction_factor = 1.0
@@ -175,7 +181,8 @@ def adjust_for_panel_size(tmb_raw: float, panel_size_mb: float,
         "correction_factor": correction_factor,
         "panel_size_mb": panel_size_mb,
         "reference_size_mb": reference_size_mb,
-        "note": "Panel-specific validation data should be used when available.",
+        "experimental_correction": experimental_correction,
+        "note": "Size-only correction is an unvalidated experimental heuristic; never use it for clinical eligibility or patient care.",
     }
 
 
@@ -198,34 +205,36 @@ def immunotherapy_response_assessment(tmb: float, cancer_type: Optional[str] = N
     -------
     dict with tmb, response_likelihood, therapy_recommendation, evidence_level
     """
-    if tmb < 0:
-        raise ValueError(f"tmb must be >= 0; got {tmb}")
+    if isinstance(tmb, bool) or not isinstance(tmb, (int, float)) or not math.isfinite(tmb) or tmb < 0:
+        raise ValueError("tmb must be a finite non-negative number")
 
     result = {"tmb": tmb}
 
     if tmb >= FDA_TMB_THRESHOLD:
-        result["response_likelihood"] = "Higher likelihood of response to checkpoint inhibitors"
+        result["response_likelihood"] = "TMB at or above numeric high cutoff; response probability not determined"
         result["therapy_recommendation"] = (
-            "Pembrolizumab approved for TMB-H (>=10 mut/Mb) solid tumors "
-            "regardless of cancer type (FDA 2020). Consider immune checkpoint "
-            "inhibitor therapy."
+            "FDA 2020 accelerated approval of Pembrolizumab concerns previously treated unresectable "
+            "or metastatic solid tumors with TMB >=10 mut/Mb by an FDA-approved "
+            "test and no satisfactory alternative treatments. "
+            "This numerical assessment does not establish clinical eligibility."
         )
-        result["evidence_level"] = "FDA-approved (KEYNOTE-158)"
+        result["evidence_level"] = "FDA indication applies only with its additional clinical and assay criteria"
     elif tmb >= 5.0:
-        result["response_likelihood"] = "Moderate likelihood of response"
+        result["response_likelihood"] = "Intermediate TMB; response probability not determined"
         result["therapy_recommendation"] = (
             "TMB is intermediate. Response to checkpoint inhibitors varies by "
             "cancer type. Consider as part of a comprehensive biomarker panel."
         )
-        result["evidence_level"] = "Emerging evidence"
+        result["evidence_level"] = "Descriptive TMB category; no response prediction"
     else:
-        result["response_likelihood"] = "Lower likelihood of response to checkpoint inhibitors alone"
+        result["response_likelihood"] = "Low TMB; response probability not determined"
         result["therapy_recommendation"] = (
-            "TMB is low. Checkpoint inhibitor monotherapy may have limited "
-            "efficacy. Consider combination therapy or alternative approaches."
+            "TMB is below this numeric cutoff. It does not exclude benefit "
+            "from immunotherapy under other indications or biomarkers."
         )
-        result["evidence_level"] = "Standard of care"
+        result["evidence_level"] = "Descriptive TMB category; no response prediction"
 
+    result["note"] = "Exploratory context only; not a validated response predictor or a treatment recommendation."
     if cancer_type:
         result["cancer_type"] = cancer_type
 
@@ -259,26 +268,39 @@ def process_batch(input_csv: str, output_csv: str) -> int:
     Expected columns: total_mutations, coding_region_size_mb
     Optional: synonymous_count, include_synonymous, cancer_type
     """
-    with open(input_csv, mode="r", encoding="utf-8-sig") as f:
+    if os.path.realpath(input_csv) == os.path.realpath(output_csv):
+        raise ValueError("Input and output CSV paths must differ")
+    with open(input_csv, mode="r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         fieldnames = list(reader.fieldnames or [])
+        if not {"total_mutations", "coding_region_size_mb"}.issubset(fieldnames):
+            raise ValueError("CSV requires total_mutations and coding_region_size_mb columns")
+        if len(fieldnames) != len(set(fieldnames)):
+            raise ValueError("CSV contains duplicate column names")
         rows = list(reader)
 
-    out_fields = fieldnames + ["tmb", "tmb_category", "fda_eligible",
-                               "therapy_recommendation"]
+    out_fields = fieldnames + [key for key in ("tmb", "tmb_category", "fda_eligible", "therapy_recommendation") if key not in fieldnames]
     out_rows = []
 
-    for row in rows:
-        mutations = int(row.get("total_mutations", 0))
-        region_mb = float(row.get("coding_region_size_mb", WES_CODING_REGION_MB))
-        syn_count = int(row.get("synonymous_count", 0))
-        include_syn = row.get("include_synonymous", "false").lower() == "true"
-        cancer = row.get("cancer_type", None)
+    for row_number, row in enumerate(rows, start=2):
+        if None in row:
+            raise ValueError(f"CSV row {row_number} contains extra columns")
+        try:
+            mutations = int(row["total_mutations"])
+            region_mb = float(row["coding_region_size_mb"])
+            syn_count = int(row.get("synonymous_count") or 0)
+            flag = (row.get("include_synonymous") or "false").strip().lower()
+            if flag not in ("true", "false", "yes", "no", "1", "0"):
+                raise ValueError("include_synonymous must be true/false")
+            include_syn = flag in ("true", "yes", "1")
+            cancer = row.get("cancer_type", None)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid CSV row {row_number}: {exc}") from exc
 
         tmb_result = calculate_tmb(mutations, region_mb, include_syn, syn_count)
         response = immunotherapy_response_assessment(tmb_result["tmb"], cancer)
 
-        row_dict = dict(row)
+        row_dict = {key: ("'" + val if isinstance(val, str) and val.lstrip().startswith(("=", "+", "-", "@")) else val) for key, val in row.items()}
         row_dict["tmb"] = tmb_result["tmb"]
         row_dict["tmb_category"] = tmb_result["tmb_category"]
         row_dict["fda_eligible"] = tmb_result["fda_eligible"]

@@ -75,8 +75,11 @@ class TestPanelAdjustment:
     def test_adjustment_small_panel(self):
         result = adjust_for_panel_size(10.0, 1.14)
         assert result["raw_tmb"] == 10.0
-        assert result["correction_factor"] > 1.0
-        assert result["adjusted_tmb"] > 10.0
+        assert result["correction_factor"] == 1.0
+        assert result["adjusted_tmb"] == 10.0
+        exploratory = adjust_for_panel_size(10.0, 1.14, experimental_correction=True)
+        assert exploratory["correction_factor"] > 1.0
+        assert exploratory["experimental_correction"] is True
 
     def test_adjustment_large_panel(self):
         result = adjust_for_panel_size(10.0, 38.0)
@@ -96,16 +99,16 @@ class TestImmunotherapyResponse:
 
     def test_response_tmb_high(self):
         result = immunotherapy_response_assessment(15.0)
-        assert "Higher likelihood" in result["response_likelihood"]
+        assert "response probability not determined" in result["response_likelihood"]
         assert "Pembrolizumab" in result["therapy_recommendation"]
 
     def test_response_tmb_intermediate(self):
         result = immunotherapy_response_assessment(7.0)
-        assert "Moderate" in result["response_likelihood"]
+        assert "Intermediate TMB" in result["response_likelihood"]
 
     def test_response_tmb_low(self):
         result = immunotherapy_response_assessment(2.0)
-        assert "Lower likelihood" in result["response_likelihood"]
+        assert "Low TMB" in result["response_likelihood"]
 
     def test_response_with_cancer_type(self):
         result = immunotherapy_response_assessment(12.0, "NSCLC")
