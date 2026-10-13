@@ -75,8 +75,11 @@ class TestPanelAdjustment:
     def test_adjustment_small_panel(self):
         result = adjust_for_panel_size(10.0, 1.14)
         assert result["raw_tmb"] == 10.0
-        assert result["correction_factor"] > 1.0
-        assert result["adjusted_tmb"] > 10.0
+        assert result["correction_factor"] == 1.0
+        assert result["adjusted_tmb"] == 10.0
+        exploratory = adjust_for_panel_size(10.0, 1.14, experimental_correction=True)
+        assert exploratory["correction_factor"] > 1.0
+        assert exploratory["experimental_correction"] is True
 
     def test_adjustment_large_panel(self):
         result = adjust_for_panel_size(10.0, 38.0)

@@ -83,11 +83,11 @@ def calculate_tmb(total_mutations: int, coding_region_size_mb: float,
     total_mutations, non_synonymous_mutations, description
     """
     if type(total_mutations) is not int or total_mutations < 0:
-        raise ValueError("total_mutations must be a non-negative integer")
+        raise ValueError("total_mutations must be >= 0 and an integer")
     if isinstance(coding_region_size_mb, bool) or not isinstance(coding_region_size_mb, (int, float)) or not math.isfinite(coding_region_size_mb) or coding_region_size_mb <= 0:
-        raise ValueError("coding_region_size_mb must be a finite number > 0")
+        raise ValueError("coding_region_size_mb must be > 0 and finite")
     if type(synonymous_count) is not int or synonymous_count < 0:
-        raise ValueError("synonymous_count must be a non-negative integer")
+        raise ValueError("synonymous_count must be >= 0 and an integer")
     if synonymous_count > total_mutations:
         raise ValueError("synonymous_count cannot exceed total_mutations")
 
@@ -215,7 +215,7 @@ def immunotherapy_response_assessment(tmb: float, cancer_type: Optional[str] = N
     if tmb >= FDA_TMB_THRESHOLD:
         result["response_likelihood"] = "Higher likelihood of response to checkpoint inhibitors"
         result["therapy_recommendation"] = (
-            "FDA 2020 accelerated approval concerns previously treated unresectable "
+            "FDA 2020 accelerated approval of Pembrolizumab concerns previously treated unresectable "
             "or metastatic solid tumors with TMB >=10 mut/Mb by an FDA-approved "
             "test and no satisfactory alternative treatments. "
             "This numerical assessment does not establish clinical eligibility."

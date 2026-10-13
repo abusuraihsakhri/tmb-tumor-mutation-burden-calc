@@ -1,236 +1,71 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tmb Tumor Mutation Burden Calc — Operations Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #090d16;
-            --card: #111827;
-            --border: #1f293d;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
-            --text: #f3f4f6;
-            --text-muted: #9ca3af;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 2rem;
-            min-height: 100vh;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .header-title h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
-        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
-        .badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 1.5rem;
-        }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .card h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.65rem 0.9rem;
-            background: #0d1322;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: #fff;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0.7rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
-        }
-        .btn:hover { background: #2563eb; }
-        .terminal {
-            background: #060911;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #10b981;
-            height: 380px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .metrics-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .metric-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-        .metric-val { font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 0.25rem; }
-        .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0f172a">
+<title>TMB Calculator — mutations per megabase</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#152238;--line:#334155;--text:#eef4fc;--muted:#b4c5d9;--blue:#77bdfb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:16px/1.5 system-ui,-apple-system,sans-serif;color:var(--text)}
+main{max-width:1010px;margin:auto;padding:28px 18px 55px}
+h1{font-size:clamp(1.7rem,4vw,2.6rem);line-height:1.2;margin:.3rem 0 .7rem}
+h2{font-size:1.1rem;margin:0 0 1rem}p{margin:.5rem 0 1rem}
+.subtitle,.note{color:var(--muted)}.eyebrow{font-size:.75rem;text-transform:uppercase;letter-spacing:.12em;color:var(--blue);font-weight:700}
+.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;margin-top:24px}
+.panel{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:22px}
+label{font-size:.91rem;display:block;margin:0 0 7px;font-weight:600}
+input{display:block;width:100%;padding:11px 13px;background:#091526;color:var(--text);border:1px solid #64748b;border-radius:8px;font:inherit}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.field{margin-bottom:18px}.hint{font-size:.79rem;color:var(--muted);margin-top:5px}
+button{border:0;background:#3b82f6;color:white;border-radius:8px;padding:11px 15px;font:inherit;font-weight:700;cursor:pointer}
+button:hover{background:#2563eb}button:disabled{opacity:.5;cursor:not-allowed}
+.smallbtn{background:#334155}.smallbtn:hover{background:#475569}
+.result-number{font-size:clamp(2.6rem,7vw,4rem);font-weight:800;line-height:1.1;letter-spacing:-.04em;margin:8px 0}
+.unit{font-size:.95rem;font-weight:500;color:var(--muted);letter-spacing:0}
+.status{font-weight:700;margin-bottom:14px;color:#93c5fd}
+.details{border-top:1px solid var(--line);margin:15px 0 0;padding-top:14px}
+.details div{display:flex;justify-content:space-between;gap:12px;margin:5px 0}
+.details span:first-child{color:var(--muted)}
+.notice{border-left:3px solid var(--blue);padding:9px 12px;background:#0b1b31;margin-top:17px;color:#d7e6f8;font-size:.88rem}
+.error{color:#fca5a5;font-weight:600;min-height:1.5em}
+.full{margin-top:18px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.row button{flex:0 0 auto}
+a{color:#93c5fd}footer{color:var(--muted);font-size:.84rem;margin-top:26px}
+@media(max-width:700px){.grid{grid-template-columns:1fr}.panel{padding:18px}main{padding-top:20px}}
+</style>
 </head>
 <body>
-
-    <div class="header">
-        <div class="header-title">
-            <h1>Tmb Tumor Mutation Burden Calc</h1>
-            <p>Domain: Clinical & Cryptographic AI | Standard: CAP / CLSI / NIST Standards | LabMind-Atlas Architecture</p>
-        </div>
-        <div>
-            <span class="badge">Air-Gapped Active</span>
-            <span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border-color: #10b981;">Zero-PHI Guard Active</span>
-        </div>
-    </div>
-
-    <div class="metrics-bar">
-        <div class="metric-box">
-            <div class="metric-label">System Status</div>
-            <div class="metric-val" style="color: var(--success);" id="m-status">OPTIMAL</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Tasks Processed</div>
-            <div class="metric-val" id="m-tasks">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">Audit Blocks Signed</div>
-            <div class="metric-val" id="m-audit">142</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-label">PHI Interceptions</div>
-            <div class="metric-val" style="color: var(--accent);" id="m-phi">0</div>
-        </div>
-    </div>
-
-    <div class="grid">
-        <div class="card">
-            <h2>⚙️ Dispatch Distributed Component Audit</h2>
-            <div class="form-group">
-                <label>Task / Sample ID</label>
-                <input type="text" id="task_id" value="TASK-2026-LIVE-01">
-            </div>
-            <div class="form-group">
-                <label>Target Identifier</label>
-                <input type="text" id="target_id" value="SPECIMEN-ALPHA-77">
-            </div>
-            <div class="form-group">
-                <label>Primary Measurement / Value</label>
-                <input type="number" id="primary_metric" value="29.4" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Secondary Metric / Kinetic Index</label>
-                <input type="number" id="secondary_metric" value="14.8" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Status / Phenotype Descriptor</label>
-                <input type="text" id="status_descriptor" value="DISCORDANT_ANOMALY">
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="is_critical" checked> Trigger Emergency / Critical Flag</label>
-            </div>
-            <button class="btn" onclick="runAudit()">Execute Distributed Component Audit</button>
-        </div>
-
-        <div class="card">
-            <h2>📊 Real-Time Consensus Dossier & Audit Log</h2>
-            <div class="terminal" id="outputConsole">// Tmb Tumor Mutation Burden Calc Operations Console Ready
-// Connection established with Air-Gapped Supervisor
-// Cryptographic HMAC-SHA256 audit ledger loaded.
-// Ready for live task payload dispatch...</div>
-        </div>
-    </div>
-
-    <script>
-        async function runAudit() {
-            const consoleEl = document.getElementById('outputConsole');
-            consoleEl.innerText = "// Dispatching task across specialized workers...
-// Invoking InvariantQCWorker, SafetyEscalationWorker, ProtocolWorker...";
-
-            const payload = {
-                task_id: document.getElementById('task_id').value,
-                target_identifier: document.getElementById('target_id').value,
-                primary_metric: parseFloat(document.getElementById('primary_metric').value),
-                secondary_metric: parseFloat(document.getElementById('secondary_metric').value),
-                status_descriptor: document.getElementById('status_descriptor').value,
-                is_critical_flag: document.getElementById('is_critical').checked
-            };
-
-            try {
-                const res = await fetch('/api/audit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                consoleEl.innerText = JSON.stringify(data, null, 2);
-                document.getElementById('m-tasks').innerText = parseInt(document.getElementById('m-tasks').innerText) + 1;
-                document.getElementById('m-audit').innerText = parseInt(document.getElementById('m-audit').innerText) + 1;
-            } catch (err) {
-                consoleEl.innerText = "// Offline / Simulation Output:\n" + JSON.stringify({
-                    dossier_id: "DOSSIER-SIM-" + Math.floor(Math.random()*10000),
-                    system: "tmb-tumor-mutation-burden-calc",
-                    domain: "Clinical & Cryptographic AI",
-                    task_id: payload.task_id,
-                    overall_urgency: payload.is_critical_flag ? "CRITICAL_STAT_PANIC" : "ELEVATED_RISK",
-                    integrity_status: "DISCORDANT_ANOMALY",
-                    alerts: [
-                        { worker: "InvariantQCWorker", alert: "Primary metric exceeds upper reference bound" },
-                        { worker: "SafetyEscalationWorker", alert: "Critical emergency interlock flag active" }
-                    ],
-                    audit_hash: "HMAC_SHA256_e83f9a72b941d6c381f9"
-                }, null, 2);
-            }
-        }
-    </script>
+<main>
+<div class="eyebrow">Genomic biomarker · research utility</div>
+<h1>Tumor mutational burden calculator</h1>
+<p class="subtitle">Calculate somatic mutation density in mutations per megabase (mut/Mb). Computation runs in your browser; files are not uploaded.</p>
+<div class="grid">
+<section class="panel" aria-labelledby="calc-title">
+<h2 id="calc-title">Single sample</h2>
+<form id="calc-form">
+<div class="field"><label for="mutations">Count of eligible somatic mutations</label><input id="mutations" name="mutations" inputmode="numeric" type="number" min="0" step="1" required value="380"><div class="hint">Use the mutation inclusion and filtering rules of your assay.</div></div>
+<div class="field"><label for="region">Eligible callable territory (Mb)</label><input id="region" name="region" inputmode="decimal" type="number" min="0.000001" step="any" required value="38"><div class="hint">Enter the actual effective Mb tested, not an assumed panel size.</div></div>
+<div class="field"><label for="synonymous">Synonymous mutations included in count (optional)</label><input id="synonymous" name="synonymous" inputmode="numeric" type="number" min="0" step="1" value="0"><div class="hint">Reported separately; not removed from the TMB numerator.</div></div>
+<button type="submit">Calculate TMB</button>
+</form>
+<p class="error" id="error" role="alert" aria-live="polite"></p>
+</section>
+<section class="panel" aria-labelledby="result-title">
+<h2 id="result-title">Result</h2>
+<div class="result-number"><span id="tmb-value">—</span> <span class="unit">mut/Mb</span></div>
+<p class="status" id="category" aria-live="polite">Enter a valid sample</p>
+<div class="details"><div><span>Numeric ≥10 cutoff</span><strong id="cutoff">—</strong></div><div><span>Non-synonymous reported</span><strong id="nonsyn">—</strong></div></div>
+<div class="notice">Crossing 10 mut/Mb is a <strong>numeric screen only</strong>, not an FDA treatment-eligibility determination. Assay approval, tumor characteristics, prior treatment, and alternatives must be assessed separately. Threshold categories below 10 and above 16 are illustrative, not universal clinical standards.</div>
+</section>
+</div>
+<section class="panel full" aria-labelledby="batch-title">
+<h2 id="batch-title">Batch CSV</h2>
+<p class="note">Import a UTF-8 CSV with <code>total_mutations</code> and <code>coding_region_size_mb</code> columns; optional <code>synonymous_count</code>. Up to 2 MB and 10,000 records. Invalid rows stop processing.</p>
+<div class="row"><label for="csv-input">Select CSV file</label><input id="csv-input" type="file" accept=".csv,text/csv" style="max-width:480px"><button id="download" class="smallbtn" type="button" disabled>Download results CSV</button></div>
+<p id="batch-status" role="status" aria-live="polite" class="note">No file selected.</p>
+</section>
+<footer>For research and education, not clinical decision support. All processing is local to the browser. Source: <a href="https://www.fda.gov/drugs/drug-approvals-and-databases/fda-approves-pembrolizumab-adults-and-children-tmb-h-solid-tumors" target="_blank" rel="noopener noreferrer">FDA TMB-H indication (2020)</a>. Panel-based values require assay-specific analytical validation.</footer>
+</main>
+<script src="./app.js" defer></script>
 </body>
 </html>

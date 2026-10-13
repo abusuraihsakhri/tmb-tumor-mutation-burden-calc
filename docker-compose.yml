@@ -1,17 +1,9 @@
-version: '3.8'
-
 services:
   tmb-tumor-mutation-burden-calc:
     build: .
-    container_name: tmb-tumor-mutation-burden-calc
     ports:
       - "8000:8000"
     environment:
-      - AUDIT_SECRET_KEY=tmb-tumor-mutation-burden-calc-prod-audit-key-2026
-      - MODEL_PROVIDER=mock
+      AUDIT_SECRET_KEY: ${AUDIT_SECRET_KEY:?Set AUDIT_SECRET_KEY to a strong random value}
+      AUDIT_API_TOKEN: ${AUDIT_API_TOKEN:?Set AUDIT_API_TOKEN to a strong random value}
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
